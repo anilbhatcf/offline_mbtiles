@@ -1,12 +1,137 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:offline_mbtiles/DataProcessing.dart';
 import 'package:offline_mbtiles/simplifyjson/dauglas_peucker.dart';
+import 'package:permission_handler/permission_handler.dart';
+// import 'TileProvider.dart';
 
-import 'OfflineMap.dart';
-import 'TileRenderer.dart';
+// Future<void> parseLargeGeoJson(String filePath) async {
+//   final file = File(filePath);
+//   final inputStream = file.openRead();
+//
+//   String buffer = '';
+//
+//   // Track if we've encountered the "features" array
+//   bool featuresStarted = false;
+//
+//   await for (var chunk in inputStream) {
+//     final decodedChunk = utf8.decode(chunk);
+//     buffer += decodedChunk;
+//
+//     while (buffer.isNotEmpty) {
+//       if (!featuresStarted && buffer.contains('"features": [')) {
+//         featuresStarted = true;
+//         buffer = buffer.substring(buffer.indexOf('"features": [') + '"features": ['.length);
+//       }
+//
+//       final closingBracketIndex = buffer.indexOf('},');
+//       if (closingBracketIndex != -1) {
+//         final featureChunk = buffer.substring(0, closingBracketIndex + 1);
+//         buffer = buffer.substring(closingBracketIndex + 2);
+//
+//         try {
+//           final feature = jsonDecode(featureChunk);
+//           if (feature is Map && feature['type'] == 'Feature') {
+//             final properties = feature['properties'];
+//             final geometry = feature['geometry'];
+//             print('ID: ${properties['ID']}, Elevation: ${properties['elevation']}');
+//             print('Coordinates: ${geometry['coordinates']}');
+//           }
+//         } catch (e) {
+//           print('Failed to parse feature: $e');
+//         }
+//       } else {
+//         break;
+//       }
+//     }
+//   }
+//
+//   if (buffer.isNotEmpty) {
+//     try {
+//       final lastFeature = jsonDecode(buffer);
+//       if (lastFeature is Map && lastFeature['type'] == 'Feature') {
+//         final properties = lastFeature['properties'];
+//         final geometry = lastFeature['geometry'];
+//         print('ID: ${properties['ID']}, Elevation: ${properties['elevation']}');
+//         print('Coordinates: ${geometry['coordinates']}');
+//       }
+//     } catch (e) {
+//       print('Error parsing leftover data: $e');
+//     }
+//   }
+// }
 
-void main() {
-  simplify();
-  runApp(const MyApp());
+Future<void> requestStoragePermission() async {
+  if (await Permission.storage.isGranted) {
+    print("Storage permission already granted");
+  } else {
+    final status = await Permission.storage.request();
+    if (status.isGranted) {
+      print("Storage permission granted");
+    } else if (status.isDenied) {
+      openAppSettings();
+      print("Storage permission denied");
+    } else if (status.isPermanentlyDenied) {
+      print("Storage permission permanently denied. Please enable it from settings.");
+    }
+  }
+}
+
+Future<void> _openGeoJsonFile() async {
+  final result = await FilePicker.platform.pickFiles(
+    type: FileType.custom,
+    allowedExtensions: ['geojson', 'ndjson'],
+  );
+
+  if (result != null && result.files.single.path != null) {
+    final filePath = result.files.single.path!;
+    print('Final File Path of Selected file $filePath');
+    // parseLargeGeoJson(filePath);
+    parseNdjson(filePath);
+  } else {
+    print('No file selected');
+  }
+}
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Ensure proper initialization
+  runApp(const PlaceholderApp());
+}
+
+
+class PlaceholderApp extends StatelessWidget {
+  const PlaceholderApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(title: const Text("GeoJSON Processing")),
+        body:  const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text("Hello 123 checking"),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _openGeoJsonFile,
+                child:  Text("Select GeoJson File"),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Future<Map<String, dynamic>> loadGeoJson(String path) async {
+  final data = await rootBundle.loadString(path);
+  return jsonDecode(data);
 }
 
 void simplify() {
@@ -30,37 +155,39 @@ void simplify() {
   print('Simplified: ${simplifiedGeoJson.coordinates.length} points');
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: TileRenderer(),
-    );
-  }
-}
+// class MyApp extends StatelessWidget {
+//   final Map<String, dynamic> geojson;
+//
+//   const MyApp({super.key, required this.geojson});
+//
+//   // This widget is the root of your application.
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: 'Flutter Demo',
+//       theme: ThemeData(
+//         // This is the theme of your application.
+//         //
+//         // TRY THIS: Try running your application with "flutter run". You'll see
+//         // the application has a purple toolbar. Then, without quitting the app,
+//         // try changing the seedColor in the colorScheme below to Colors.green
+//         // and then invoke "hot reload" (save your changes or press the "hot
+//         // reload" button in a Flutter-supported IDE, or press "r" if you used
+//         // the command line to start the app).
+//         //
+//         // Notice that the counter didn't reset back to zero; the application
+//         // state is not lost during the reload. To reset the state, use hot
+//         // restart instead.
+//         //
+//         // This works for code too, not just values: Most code changes can be
+//         // tested with just a hot reload.
+//         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+//         useMaterial3: true,
+//       ),
+//       home:  TurfMap(geojson: geojson),
+//     );
+//   }
+// }
 
 // class MyHomePage extends StatefulWidget {
 //   const MyHomePage({super.key, required this.title});
