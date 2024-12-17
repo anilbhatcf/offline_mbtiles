@@ -21,7 +21,7 @@ class _TileRendererState extends State<TileRenderer> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Tile Renderer')),
+      appBar: AppBar(title: const Text('Tile Renderer')),
       body: Center(
         child: FutureBuilder<List<Offset>>(
           future: _getTile(10, 1000, 1000),
@@ -33,10 +33,10 @@ class _TileRendererState extends State<TileRenderer> {
                   size: Size(tileSize.toDouble(), tileSize.toDouble()),
                 );
               } else {
-                return Text('Error generating tile');
+                return const Text('Error generating tile');
               }
             }
-            return CircularProgressIndicator();
+            return const CircularProgressIndicator();
           },
         ),
       ),
