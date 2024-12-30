@@ -83,8 +83,10 @@ Future<void> requestStoragePermission() async {
 
 Future<void> _openGeoJsonFile() async {
   final result = await FilePicker.platform.pickFiles(
-    type: FileType.custom,
-    allowedExtensions: ['geojson', 'ndjson'],
+    type: FileType.any,
+    // allowedExtensions: ['geojson', 'ndjson'],
+    allowMultiple: false,
+    withData: false,
   );
 
   if (result != null && result.files.single.path != null) {
